@@ -182,3 +182,68 @@
     init();
   }
 })();
+/* === Architecture Flows — scoped toggles for the SVG only ===
+   Expects:
+   - Section wrapper:  <section id="architecture-flows">…</section>
+   - Mode buttons:     <button data-mode="process">, <button data-mode="deps">, <button data-mode="risk">
+   - SVG:              <svg id="flow-svg"> … </svg>
+     * Edges:          elements with   data-edge   and optional data-sec="1" for security-related edges
+     * Nodes:          groups with     data-node   (e.g., infra, data, api, sec)
+                       and a child <rect data-outline> to recolor the outline
+*/
+(function () {
+  const section = document.getElementById('architecture-flows');
+  const svg      = document.getElementById('flow-svg');
+  if (!section || !svg) return; // do nothing if the section/SVG isn't present
+
+  // 1) Button wiring (scoped to the section so it won't affect other parts)
+  const btns = Array.from(section.querySelectorAll('[data-mode]'));
+  function setActive(btn) {
+    btns.forEach(b => b.classList.toggle('active', b === btn));
+  }
+  function applyMode(mode) {
+    const isRisk = mode === 'risk';
+    const isDeps = mode === 'deps';
+
+    // Edges: dim non-security edges in risk mode; thicken security edges
+    svg.querySelectorAll('[data-edge]').forEach(edge => {
+      const isSec = edge.getAttribute('data-sec') === '1';
+      edge.setAttribute('opacity', (isRisk && !isSec) ? '0.35' : '1');
+      edge.setAttribute('stroke-width', (isRisk && isSec) ? '8' : '6');
+    });
+
+    // Nodes: highlight infra/data/api in deps mode; highlight sec in risk mode
+    svg.querySelectorAll('[data-node]').forEach(node => {
+      const id = node.getAttribute('data-node'); // e.g., 'infra' | 'data' | 'api' | 'sec'
+      const rect = node.querySelector('rect[data-outline]');
+      if (!rect) return;
+
+      const isHL  = isDeps && ['infra', 'data', 'api'].includes(id);
+      const isSEC = isRisk && id === 'sec';
+
+      // brand2 = blue, brand3 = red; fall back to light gray
+      const color = isSEC ? 'var(--brand3)' : isHL ? 'var(--brand2)' : '#e5e7eb';
+      const w     = isSEC ? '3' : '2';
+      rect.setAttribute('stroke', color);
+      rect.setAttribute('stroke-width', w);
+    });
+  }
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      setActive(btn);
+      applyMode(btn.dataset.mode || 'process');
+    });
+  });
+
+  // 2) Default mode (first button or any already marked .active)
+  const def = section.querySelector('[data-mode].active') || btns[0];
+  if (def) { setActive(def); applyMode(def.dataset.mode || 'process'); }
+
+  // 3) Smoke tests (non-fatal)
+  try {
+    console.assert(btns.length >= 3, '[flows] Expected 3 mode buttons');
+    console.assert(svg.querySelectorAll('[data-edge]').length > 0, '[flows] No edges found');
+    console.assert(svg.querySelectorAll('[data-node]').length > 0, '[flows] No nodes found');
+  } catch {}
+})();
