@@ -43,3 +43,7 @@ footer{background:var(--brand1);color:#fff;border-top:1px solid rgba(0,0,0,.4);p
   .grid-2{grid-template-columns:1fr}
   .hero h1{font-size:2.2rem}
 }
+#flows [data-mode].active {
+  outline: 2px solid var(--brand2);
+  background: rgba(37, 99, 235, 0.08);
+}
