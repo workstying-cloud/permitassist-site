@@ -247,3 +247,53 @@
     console.assert(svg.querySelectorAll('[data-node]').length > 0, '[flows] No nodes found');
   } catch {}
 })();
+/* === Architecture Flows — scoped buttons for #flows/#flow-svg ===
+   Works with the SVG you already have (data-edge, data-sec, data-node, rect[data-outline])
+*/
+(function () {
+  const section = document.getElementById('flows');
+  const svg = document.getElementById('flow-svg');
+  if (!section || !svg) return;
+
+  const btns = Array.from(section.querySelectorAll('[data-mode]'));
+
+  function setActive(btn) {
+    btns.forEach(b => b.classList.toggle('active', b === btn));
+  }
+
+  function applyMode(mode) {
+    const isRisk = mode === 'risk';
+    const isDeps = mode === 'deps';
+    // 1) Edges
+    svg.querySelectorAll('[data-edge]').forEach(edge => {
+      const isSec = edge.getAttribute('data-sec') === '1';
+      edge.setAttribute('opacity', (isRisk && !isSec) ? '0.35' : '1');
+      edge.setAttribute('stroke-width', (isRisk && isSec) ? '8' : '6');
+    });
+    // 2) Nodes
+    svg.querySelectorAll('[data-node]').forEach(node => {
+      const id = node.getAttribute('data-node');            // e.g. infra | data | api | sec
+      const rect = node.querySelector('[data-outline]');    // the outline rect to recolor
+      if (!rect) return;
+      const highlight = isDeps && ['infra','data','api'].includes(id);
+      const isSEC = isRisk && id === 'sec';
+      rect.setAttribute('stroke', isSEC ? 'var(--brand3)' : highlight ? 'var(--brand2)' : '#e5e7eb');
+      rect.setAttribute('stroke-width', isSEC ? '3' : '2');
+    });
+  }
+
+  // Wire click handlers
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      setActive(btn);
+      applyMode(btn.dataset.mode || 'process');
+    });
+  });
+
+  // Initial state (use pre-marked .active or first button)
+  const def = section.querySelector('[data-mode].active') || btns[0];
+  if (def) {
+    setActive(def);
+    applyMode(def.dataset.mode || 'process');
+  }
+})();
